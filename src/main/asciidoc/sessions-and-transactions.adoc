@@ -20,6 +20,16 @@ This ensures that they are properly closed and that any underlying connections a
 [.tabbed-example]
 .Session
 ====
+
+[.include-with-dotnet-async]
+======
+
+[source, csharp]
+----
+include::{dotnet-examples}/Examples.cs[tags=session]
+----
+======
+
 [.include-with-dotnet]
 ======
 
@@ -37,6 +47,16 @@ include::{dotnet-examples}/Examples.cs[tags=session]
 include::{java-examples}/SessionExample.java[tags=session]
 ----
 ======
+
+[.include-with-java-async]
+======
+
+[source, java]
+----
+include::{java-examples}/SessionExample.java[tags=session]
+----
+======
+
 
 [.include-with-javascript]
 ======

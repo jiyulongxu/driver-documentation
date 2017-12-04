@@ -2,6 +2,7 @@ function tabTheSource($content) {
     var LANGUAGES = {
         'dotnet': 'C#',
         'java': 'Java',
+        'java-async': 'Java Async',
         'javascript': 'JavaScript',
         'python': 'Python'
     };

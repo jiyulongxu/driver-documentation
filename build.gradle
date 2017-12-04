@@ -134,6 +134,12 @@ ext {
 
 ext {
     driverLanguages = [
+            'dotnet-async': [
+                    'name'   : 'C# Async',
+                    'version': '1.4.0',
+                    'gitref' : '1.4.0',
+                    'url'    : 'https://www.nuget.org/packages/Neo4j.Driver'
+            ],
             'dotnet': [
                     'name'   : 'C#',
                     'version': '1.4.0',
@@ -142,6 +148,12 @@ ext {
             ],
             'java': [
                     'name'   : 'Java',
+                    'version': '1.4.0',
+                    'gitref' : '1.4.0',
+                    'url'    : 'http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.neo4j.driver%22%20AND%20a%3A%22neo4j-java-driver%22'
+            ],
+            'java-async': [
+                    'name'   : 'Java async',
                     'version': '1.4.0',
                     'gitref' : '1.4.0',
                     'url'    : 'http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.neo4j.driver%22%20AND%20a%3A%22neo4j-java-driver%22'
