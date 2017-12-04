@@ -6,20 +6,13 @@
 This section describes how to create units of work and provide a logical context for that work.
 --
 
-[[driver-blocking-async]]
-== Appropriate header
-
-Blablabla about blocking and async.
-
-The examples in this chapter will ... For examples on async programming see <<driver-asynchronous-programming>>.
-
 
 [[driver-sessions]]
 == Sessions
 
 A session is a container for a sequence of transactions.
 Sessions borrow connections from a pool as required and so should be considered lightweight and disposable.
-In languages where <<developer-manual#term-thread-safety, thread safety>> is an issue, a session should _not_ be considered thread-safe.
+In languages where <<term-thread-safety, thread safety>> is an issue, a session should _not_ be considered thread-safe.
 
 In languages that support them, sessions are usually scoped within a context block.
 This ensures that they are properly closed and that any underlying connections are released and not leaked.
@@ -75,7 +68,7 @@ To execute a Cypher statement, two pieces of information are required: the state
 The template is a string containing placeholders that are substituted with parameter values at runtime.
 While it is possible to run non-parameterized Cypher, good programming practice is to use parameters in Cypher statements.
 This allows for caching of statements within the Cypher engine, which is beneficial for performance.
-Parameter values should adhere to <<developer-manual#cypher-values>>.
+Parameter values should adhere to <<cypher-values>>.
 
 The Neo4j driver API provides for three forms of transaction:
 
@@ -140,7 +133,7 @@ This means that multiple transactions cannot share network packets, thereby exhi
 Auto-commit transactions are intended to be used for simple use cases such as when learning Cypher or writing one-off scripts.
 It is not recommended to use auto-commit transactions in production environments or when performance or resilience are a primary concern.
 
-However, Auto-commit transactions are the only way to execute `<<developer-manual#query-using-periodic-commit-hint, USING PERIODIC COMMIT>>` Cypher statements.
+However, Auto-commit transactions are the only way to execute `<<query-using-periodic-commit-hint, USING PERIODIC COMMIT>>` Cypher statements.
 
 
 [[driver-transactions-transaction-functions]]
@@ -203,7 +196,7 @@ While this form is useful for a handful of use cases, it is recommended to use t
 === Cypher errors
 
 When executing Cypher, it is possible for an exception to be thrown by the Cypher engine.
-Each such exception is associated with a <<developer-manual#status-codes, status code>> that describes the nature of the error and a message that provides more detail.
+Each such exception is associated with a <<status-codes, status code>> that describes the nature of the error and a message that provides more detail.
 
 The error classifications are listed in the table below.
 
@@ -225,20 +218,81 @@ The application should retry the operation.
 [[driver-transactions-causal-chaining]]
 == Causal chaining
 
-When working with a causal cluster, the transactions in a session will automatically be causally chained.
+When working with a causal cluster, transactions can be chained to ensure causal consistency.
 This means that for any two transactions, it is guaranteed that the second transaction will begin only after the first has been successfully committed.
-This is true even if the transactions are physically carried out on different cluster members.
+This is true even if the transactions are carried out on different physical cluster members.
 
-Causal chaining is carried out by passing <<developer-manual#term-bookmark, bookmarks>> between transactions in a session.
-Each bookmark records a point in transactional history and is used to instruct the cluster to carry out work in a particular sequence.
-Bookmarks are returned from the server to the client on the successful commit of a transaction and may be supplied as parameters to new transactions.
-Passing bookmarks into a transaction causes the executing server to block until it has caught up with the latest of these bookmarks.
+Causal chaining is carried out by passing <<term-bookmark, bookmarks>> between transactions.
+Each bookmark records a point in transactional history and can be used to inform cluster members to carry out units of work in a particular sequence.
+Internally, a bookmark is passed from server to client on a successful COMMIT and back from client to server on BEGIN.
+On receipt of one or more bookmarks, the transaction server will block until it has fast forwarded to catch up with the latest of these.
 
-It is possible both to construct a session based on one or more existing bookmarks, and to extract a bookmark from a session.
-This functionality allows multiple sessions to be chained together.
-
-When running multiple independent transactions, it is recommended to use separate sessions.
+Within a session, bookmark propagation is carried out automatically and does not require any explicit signal or setting from the application.
+To opt out of this mechanism for unrelated units of work, applications can use multiple sessions.
 This avoids the small latency overhead of the causal chain.
+Propagation between sessions can be achieved by extracting the last bookmarks from one or more sessions and passing these into the construction of another.
+This is generally the only case in which an application will need to work with bookmarks directly.
+
+image::driver-passing-bookmarks.png[title="Passing bookmarks", width=800, role="middle"]
+
+[.tabbed-example]
+.Passing bookmarks between sessions
+====
+
+This example illustrates the passing of bookmarks between sessions.
+
+We are using three separate sessions: a, b and c.
+In _session a_ we run two separate transactions. 
+In the first one we create the person `Alice`, and in the second one we record that she works at `Wayne Enterprises`.
+The bookmark being passed between the two transactions is handled by the session.
+The bookmark from the last transaction is saved into an array for future use.
+
+In _session b_ we also run two separate transactions. 
+In the first one we create the person `Bob`, and in the second one we record that he works at `LexCorp`.
+Again, the bookmark being passed between the two transactions is handled by the session.
+The bookmark from the last transaction is saved into an array for future use.
+
+In the last session, _session c_, we wish to create a friendship between Alice and Bob.
+This can only be done if both `Alice` and `Bob` have been created first.
+In order to ensure this, we pass the bookmarks from the last transactions in _session a_ and _session b_, respectively.
+
+[.include-with-dotnet]
+======
+[source, csharp]
+----
+include::{dotnet-examples}/Examples.cs[tags=pass-bookmarks]
+----
+======
+
+[.include-with-java]
+======
+[source, java]
+----
+include::{java-examples}/PassBookmarkExample.java[tags=pass-bookmarks]
+----
+======
+
+[.include-with-javascript]
+======
+[source, javascript]
+----
+include::{javascript-examples}/examples.test.js[tags=pass-bookmarks]
+----
+======
+
+[.include-with-python]
+======
+
+
+[source, python]
+----
+
+include::{python-examples}/pass_bookmarks_example.py[tags=pass-bookmarks]
+----
+======
+
+====
+
 
 [TIP]
 --
@@ -298,16 +352,7 @@ include::{python-examples}/read_write_transaction_example.py[tags=read-write-tra
 
 == Asynchronous programming
 
-[NOTE]
---
-Java, .NET and JavaScript all support asynchronous programming.
-The examples here highlight specifically how Java and .NET provide for this programming model alongside their blocking API.
---
-
-[[driver-asynchronous-programming]]
-== Asynchronous programming
-
-NOTE: The async API is available with the .NET and the Java drivers.
+NOTE: The async API is only available with the .NET driver.
 
 In addition to the methods listed in the previous sections, there also exist several asynchronous methods which allow for better integration with applications written in an asynchronous style.
 Asynchronous methods are named as their synchronous counterparts but with an additional _async_ prefix.
@@ -336,42 +381,27 @@ include::{dotnet-examples}/ExamplesAsync.cs[tags=async-transaction-function]
 include::{dotnet-examples}/ExamplesAsync.cs[tags=async-explicit-transaction]
 ----
 
+======
+
+[.include-with-java]
+======
+This functionality is not available with this driver.
+======
+
+[.include-with-javascript]
+======
+This functionality is not available with this driver.
+======
+
+[.include-with-python]
+======
+This functionality is not available with this driver.
+======
+========
+
 [IMPORTANT]
 --
 It is always important to close the session object and it is suggested to keep *session.CloseAsync* in a _finally_ block to make sure all resources (such as network connection) obtained by the session will always be cleaned up properly.
 The session *close* method also enforces rolling back of the last uncommitted or failed transaction in this session.
 Thus it is optional to put *tx.CommitAsync* or *tx.RollbackAsync* in a _finally_ block as long as the *close* of session where the transaction is created will be executed in an outer _finally_ block.
 --
-
-
-[.include-with-java]
-======
-
-.Auto-commit transactions
-[source, java]
-----
-include::{java-examples}/AsyncAutocommitTransactionExample.java[tags=async-autocommit-transaction]
-----
-
-.Transaction functions
-[source, java]
-----
-include::{java-examples}/AsyncTransactionFunctionExample.java[tags=async-transaction-function]
-----
-
-.Explicit transactions
-[source, java]
-----
-include::{java-examples}/AsyncExplicitTransactionExample.java[tags=async-explicit-transaction]
-----
-
-[IMPORTANT]
---
-It is important to close the session object to make sure all resources (such as network connections) obtained by the session are cleaned up properly.
-It is therefore suggested to always do `Session#closeAsync()` at the end of the whole `CompletionStage` chain.
-Sessions should be closed regardless of whether the completes normally or exceptionally.
-Closing the session also enforces the rollback of the last uncommitted or failed transaction in the session.
-Thus it is optional to roll back the transaction using `Transaction#rollbackAsync()`, as long as the session is closed at the end of the full chain.
---
-
-======
